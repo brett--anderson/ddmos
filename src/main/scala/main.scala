@@ -26,11 +26,11 @@ object Bridge {
 //      parser = new CommandLineParser()
 //      parser.parse(args)
       val bridge = new Bridge()
-      var serverUri: String = ""
-      var clientId: String = ""
-      var zkConnect: String = ""
-      var mqttTopicFilters: Array[String] = Array("foof")
-      bridge.connect(serverUri, clientId, zkConnect)
+      var serverUri: String = "tcp://localhost:1883"
+      var clientId: String = "didymus"
+      var bsConnect: String = "localhost:9092"
+      var mqttTopicFilters: Array[String] = Array("#")
+      bridge.connect(serverUri, clientId, bsConnect)
       bridge.subscribe(mqttTopicFilters)
     } catch {
       case e: MqttException => e.printStackTrace(System.err)
@@ -49,12 +49,12 @@ class Bridge extends MqttCallback {
 
   private var kafkaProducer: KafkaProducer[String, Array[Byte]] = _
 
-  private def connect(serverURI: String, clientId: String, zkConnect: String) {
+  private def connect(serverURI: String, clientId: String, bsConnect: String) {
     mqtt = new MqttAsyncClient(serverURI, clientId)
     mqtt.setCallback(this)
     val token = mqtt.connect()
     val props = new Properties()
-    props.put("zk.connect", zkConnect)
+    props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bsConnect)
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
       classOf[StringSerializer])
     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
