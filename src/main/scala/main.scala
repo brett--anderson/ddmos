@@ -2,8 +2,12 @@ package com.m2mci.mqttKafkaBridge;
 
 import java.util.Properties;
 
-import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.clients.producer.ProducerRecord;
+
+import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.apache.kafka.common.serialization.StringSerializer;
 
 import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
@@ -17,20 +21,22 @@ import org.kohsuke.args4j.CmdLineException;
 object Bridge {
 
   def main(args: Array[String]) {
-    var parser: CommandLineParser = null
+//    var parser: CommandLineParser = null
     try {
-      parser = new CommandLineParser()
-      parser.parse(args)
+//      parser = new CommandLineParser()
+//      parser.parse(args)
       val bridge = new Bridge()
-      bridge.connect(parser.getServerURI, parser.getClientId, parser.getZkConnect)
-      bridge.subscribe(parser.getMqttTopicFilters)
+      var serverUri: String = ""
+      var clientId: String = ""
+      var zkConnect: String = ""
+      var mqttTopicFilters: Array[String] = Array("foof")
+      bridge.connect(serverUri, clientId, zkConnect)
+      bridge.subscribe(mqttTopicFilters)
     } catch {
       case e: MqttException => e.printStackTrace(System.err)
-      case e: CmdLineException =>
-
-        {
+      case e: CmdLineException => {
         System.err.println(e.getMessage)
-        parser.printUsage(System.err)
+//        parser.printUsage(System.err)
       }
     }
   }
@@ -41,7 +47,7 @@ class Bridge extends MqttCallback {
 
   private var mqtt: MqttAsyncClient = _
 
-  private var kafkaProducer: Producer[String, String] = _
+  private var kafkaProducer: KafkaProducer[String, Array[Byte]] = _
 
   private def connect(serverURI: String, clientId: String, zkConnect: String) {
     mqtt = new MqttAsyncClient(serverURI, clientId)
@@ -49,9 +55,11 @@ class Bridge extends MqttCallback {
     val token = mqtt.connect()
     val props = new Properties()
     props.put("zk.connect", zkConnect)
-    props.put("serializer.class", "kafka.serializer.DefaultEncoder")
-    val config = new ProducerConfig(props)
-    kafkaProducer = new Producer[String, String](config)
+    props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
+      classOf[StringSerializer])
+    props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG,
+      classOf[ByteArraySerializer])
+    kafkaProducer = new KafkaProducer(props)
     token.waitForCompletion()
     logger.info("Connected to MQTT and Kafka")
   }
@@ -97,7 +105,7 @@ class Bridge extends MqttCallback {
 
   override def messageArrived(topic: String, message: MqttMessage) {
     val payload = message.getPayload
-    val data = new ProducerData[String, Message](topic, new Message(payload))
+    val data = new ProducerRecord[String, Array[Byte]](topic, payload)
     kafkaProducer.send(data)
   }
 }
