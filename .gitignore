@@ -18,3 +18,9 @@ project/plugins/project/
 
 # Scala Emacs specific
 .ensime_cache
+
+# OSX
+.DS_Store
+
+# ??
+didymus-tcplocalhost1883
