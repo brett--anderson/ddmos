@@ -13,6 +13,7 @@ import org.apache.log4j.Logger;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions;
 import org.eclipse.paho.client.mqttv3.MqttCallback;
 import org.eclipse.paho.client.mqttv3.MqttException;
 import org.eclipse.paho.client.mqttv3.MqttMessage;
@@ -52,7 +53,10 @@ class Bridge extends MqttCallback {
   private def connect(serverURI: String, clientId: String, bsConnect: String) {
     mqtt = new MqttAsyncClient(serverURI, clientId)
     mqtt.setCallback(this)
-    val token = mqtt.connect()
+    var mco: MqttConnectOptions = new MqttConnectOptions()
+    mco.setUserName("jane@mens.de")
+    mco.setPassword("jolie".toCharArray())
+    val token = mqtt.connect(mco)
     val props = new Properties()
     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bsConnect)
     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG,
@@ -90,7 +94,8 @@ class Bridge extends MqttCallback {
         return
 
       } catch {
-        case e: MqttException => logger.warn("Reconnect failed, retrying in 10 seconds", e)
+        case e: MqttException => logger.warn(
+          "Reconnect failed, retrying in 10 seconds", e)
       }
       try {
         Thread.sleep(10000)
@@ -105,7 +110,9 @@ class Bridge extends MqttCallback {
 
   override def messageArrived(topic: String, message: MqttMessage) {
     val payload = message.getPayload
-    val data = new ProducerRecord[String, Array[Byte]](topic, payload)
+    println("message received for topic: " + topic)
+    val data = new ProducerRecord[String, Array[Byte]]("data", payload)
+    //Call Authentication service, check users access to
     kafkaProducer.send(data)
   }
 }
