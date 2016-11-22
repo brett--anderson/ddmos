@@ -1,4 +1,4 @@
-# Didymus #
+# DDMOS #
 
 Kafka MQTT Bridge with configurable routing and authentication / authorization
 
